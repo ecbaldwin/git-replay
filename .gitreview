@@ -1,0 +1,6 @@
+[gerrit]
+host=gerrit.cobaldwins.net
+port=29418
+project=git-replay/git-replay
+defaultbranch=master
+defaultrebase=0
