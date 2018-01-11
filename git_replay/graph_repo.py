@@ -6,7 +6,6 @@
 
 
 import git
-import sys
 
 
 visited = set()
@@ -22,7 +21,8 @@ def visit_commit(commit):
         print("\"%s\" -> \"%s\"" % (commit, parent))
         visit_commit(parent)
     for predecessor in commit.predecessors:
-        print("\"%s\" -> \"%s\" [ style=\"dashed\"; tooltip=\"%s\" ]" % (commit, predecessor, commit.summary))
+        print("\"%s\" -> \"%s\" [ style=\"dashed\"; tooltip=\"%s\" ]" % (
+            commit, predecessor, commit.summary))
         visit_commit(predecessor)
 
 

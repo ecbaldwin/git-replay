@@ -5,6 +5,7 @@ import sys
 # TODO(Carl) What happens to the GPG signature?
 # TODO(Carl) Test amending the first commit
 
+
 def convert_date(date, tz_offset):
     # GitPython docs define tz_offset as seconds west of utc, strange.
     sign = '-' if tz_offset > 0 else '+'
@@ -47,6 +48,7 @@ def insert_references(repo, pairs):
 
     # Reset the head to the new chain of commits
     repo.head.reset(new_new, index=False)
+
 
 def main():
     # Find the git repo given the current working directory just like git does.
