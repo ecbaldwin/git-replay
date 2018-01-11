@@ -1,3 +1,4 @@
+import collections
 import git
 import sys
 
@@ -12,30 +13,45 @@ def convert_date(date, tz_offset):
     return "%d %s%02d00" % (date, sign, abs(tz_offset / 3600))
 
 
+def make_rebase_map(pairs):
+    rebase_map = collections.defaultdict(list)
+    for old, new in pairs:
+        rebase_map[new].append(old)
+    return dict(rebase_map)
+
+
+def replace_commit(repo, commit, new_parents, predecessors):
+    author_date = convert_date(commit.authored_date, commit.author_tz_offset)
+    commit_date = convert_date(commit.committed_date, commit.committer_tz_offset)
+
+    return git.objects.commit.Commit.create_from_tree(
+        repo=repo,
+        tree=commit.tree,
+        author=commit.author,
+        committer=commit.committer,
+        message=commit.message,
+
+        parent_commits=new_parents,
+        author_date=author_date,
+        commit_date=commit_date,
+        predecessors=predecessors)
+
+
 def insert_references(repo, pairs):
+    pairs = [(repo.commit(rev=old), repo.commit(rev=new)) for old, new in pairs]
+
+    rebase_map = make_rebase_map(pairs)
+
     replacements = {}
-
-    for old_rev, new_rev in pairs:
-        old, new = repo.commit(rev=old_rev), repo.commit(rev=new_rev)
-
-        # Map the commit's parents to commits that we've already replaced
-        new_parents = [replacements.get(p, p) or p for p in new.parents]
-
-        author_date = convert_date(new.authored_date, new.author_tz_offset)
-        commit_date = convert_date(new.committed_date, new.committer_tz_offset)
+    for old, new in pairs:
+        if replacements.get(new):
+            continue
 
         # Copy the old commit but add replaces references to the old commits
-        new_new = git.objects.commit.Commit.create_from_tree(
-            repo=repo,
-            tree=new.tree,
-            message=new.message,
-            parent_commits=new_parents,
-            head=False,
-            author=new.author,
-            committer=new.committer,
-            author_date=author_date,
-            commit_date=commit_date,
-            predecessors=[old])
+        new_new = replace_commit(repo,
+                                 commit=new,
+                                 new_parents=[replacements.get(p, p) or p for p in new.parents],
+                                 predecessors=rebase_map[new])
 
         replacements[new] = new_new
 

@@ -1,2 +1,2 @@
 setuptools
-git-python
+-e git://github.com/ecbaldwin/GitPython.git#egg=git-python

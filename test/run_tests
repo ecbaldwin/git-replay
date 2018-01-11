@@ -1,0 +1,46 @@
+#!/bin/bash
+
+. "$(dirname "$0")/test-common.sh"
+
+create_git_workspace $TEST_TMP_DIR/client
+
+pushd $TEST_TMP_DIR/client
+
+git-replay init
+
+########################################################################
+# Test amending the top commit
+########################################################################
+
+quick_commit_files "First commit" one
+quick_commit_files "Secon commit" two
+
+oldhead=$(git rev-parse HEAD)
+
+git commit --amend -m "Second commit"
+
+assert_equal "predecessor reference" \
+    "$oldhead" "$(git cat-file -p HEAD | awk '/predecessor/ {print $2}')"
+
+########################################################################
+# Test a fixup to an earlier commit
+########################################################################
+
+commit_one=$(git rev-parse HEAD~)
+commit_two=$(git rev-parse HEAD)
+
+echo text > one
+git commit -a --fixup $commit_one
+
+commit_three=$(git rev-parse HEAD)
+
+EDITOR=touch git rebase --root --autosquash -i
+
+assert_equal "Second commits predecessor" \
+    "$commit_two" "$(git cat-file -p HEAD | awk '/predecessor/ {print $2}')"
+
+assert_equal "First commit first predecessor" \
+    "$commit_one" "$(git cat-file -p HEAD~ | awk '/predecessor/ {print $2}' | sed -n 1p)"
+
+assert_equal "First commit second predecessor" \
+    "$commit_three" "$(git cat-file -p HEAD~ | awk '/predecessor/ {print $2}' | sed -n 2p)"
