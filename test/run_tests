@@ -1,46 +1,29 @@
 #!/bin/bash
 
-. "$(dirname "$0")/test-common.sh"
+RESULT=0
+declare -a tests failed
 
-create_git_workspace $TEST_TMP_DIR/client
+tests=($(dirname "$0")/test????-*)
 
-pushd $TEST_TMP_DIR/client
+if [ $# -ne 0 ]
+then
+    tests=$@
+fi
 
-git-replay init
+for t in $tests
+do
+    $t
+    [ $? -ne 0 ] && RESULT=1
+    failed+=($t)
+done
 
-########################################################################
-# Test amending the top commit
-########################################################################
+if [ ${#failed[@]} -ne 0 ]
+then
+    echo >&2 "Some tests failed:"
+    for t in ${failed[@]}
+    do
+        echo >&2 $t
+    done
+fi
 
-quick_commit_files "First commit" one
-quick_commit_files "Secon commit" two
-
-oldhead=$(git rev-parse HEAD)
-
-git commit --amend -m "Second commit"
-
-assert_equal "predecessor reference" \
-    "$oldhead" "$(git cat-file -p HEAD | awk '/predecessor/ {print $2}')"
-
-########################################################################
-# Test a fixup to an earlier commit
-########################################################################
-
-commit_one=$(git rev-parse HEAD~)
-commit_two=$(git rev-parse HEAD)
-
-echo text > one
-git commit -a --fixup $commit_one
-
-commit_three=$(git rev-parse HEAD)
-
-EDITOR=touch git rebase --root --autosquash -i
-
-assert_equal "Second commits predecessor" \
-    "$commit_two" "$(git cat-file -p HEAD | awk '/predecessor/ {print $2}')"
-
-assert_equal "First commit first predecessor" \
-    "$commit_one" "$(git cat-file -p HEAD~ | awk '/predecessor/ {print $2}' | sed -n 1p)"
-
-assert_equal "First commit second predecessor" \
-    "$commit_three" "$(git cat-file -p HEAD~ | awk '/predecessor/ {print $2}' | sed -n 2p)"
+exit $RESULT
