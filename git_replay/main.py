@@ -1,3 +1,4 @@
+import functools
 import git
 import os
 import shutil
@@ -13,7 +14,19 @@ class UsageException(Exception):
     """ Raised when the command is invoked improperly """
 
 
-def init_repo(program_name, repo):
+def require_repo(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        try:
+            repo = git.Repo(".")
+        except git.exc.InvalidGitRepositoryError:
+            raise UsageException("This command should be run from inside a workspace to initialize")
+        return f(repo, *args, **kwargs)
+    return wrapper
+
+
+@require_repo
+def command_init(repo, program_name, args):
     bin_dir = os.path.dirname(program_name)
     post_rewrite_script = os.path.join(bin_dir, POST_REWRITE_FILENAME)
     destination = os.path.join(repo.git_dir, HOOKS_DIR, POST_REWRITE_FILENAME)
@@ -21,15 +34,6 @@ def init_repo(program_name, repo):
     shutil.copyfile(post_rewrite_script, destination)
     st = os.stat(destination)
     os.chmod(destination, st.st_mode | stat.S_IEXEC)
-
-
-def command_init(program_name, args):
-    try:
-        repo = git.Repo(".")
-    except git.exc.InvalidGitRepositoryError:
-        raise UsageException("The init command should be run from inside a workspace to initialize")
-
-    return init_repo(program_name, repo)
 
 
 def dispatch_command(program_name, args):
