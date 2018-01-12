@@ -18,6 +18,8 @@ setup(name="git-replay",
           'console_scripts': [
               'git-graph = git_replay.graph_repo:main',
               'git-replay = git_replay.main:main',
-              'post-rewrite = git_replay.post_rewrite:main'
+              'post-rewrite = git_replay.post_rewrite:main',
+              'pre-receive = git_replay.pre_receive:main',
+              'update = git_replay.update:main',
           ]
       })

@@ -8,6 +8,8 @@ import sys
 
 HOOKS_DIR = "hooks"
 POST_REWRITE_FILENAME = "post-rewrite"
+PRE_RECEIVE_FILENAME = "pre-receive"
+UPDATE_FILENAME = "update"
 
 
 class UsageException(Exception):
@@ -25,15 +27,25 @@ def require_repo(f):
     return wrapper
 
 
-@require_repo
-def command_init(repo, program_name, args):
-    bin_dir = os.path.dirname(program_name)
-    post_rewrite_script = os.path.join(bin_dir, POST_REWRITE_FILENAME)
-    destination = os.path.join(repo.git_dir, HOOKS_DIR, POST_REWRITE_FILENAME)
+def _copy_hook(repo, program_name, name):
+    source = os.path.join(os.path.dirname(program_name),
+                          name)
+    destination = os.path.join(repo.git_dir, HOOKS_DIR, name)
 
-    shutil.copyfile(post_rewrite_script, destination)
+    shutil.copyfile(source, destination)
     st = os.stat(destination)
     os.chmod(destination, st.st_mode | stat.S_IEXEC)
+
+
+@require_repo
+def command_init(repo, program_name, args):
+    _copy_hook(repo, program_name, POST_REWRITE_FILENAME)
+
+
+@require_repo
+def command_init_server(repo, program_name, args):
+    _copy_hook(repo, program_name, PRE_RECEIVE_FILENAME)
+    _copy_hook(repo, program_name, UPDATE_FILENAME)
 
 
 def dispatch_command(program_name, args):
@@ -43,6 +55,9 @@ def dispatch_command(program_name, args):
     command = args[0]
     if command == "init":
         return command_init(program_name, args[1:])
+
+    if command == "init-server":
+        return command_init_server(program_name, args[1:])
 
     raise UsageException("Command not recognized: %s" % command)
 
