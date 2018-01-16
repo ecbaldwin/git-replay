@@ -3,18 +3,22 @@
 RESULT=0
 declare -a tests failed
 
-tests=($(dirname "$0")/test????-*)
-
+# Find tests to execute
 if [ $# -ne 0 ]
 then
     tests=$@
+else
+    tests=($(dirname "$0")/test????-*)
 fi
 
-for t in $tests
+for t in ${tests[@]}
 do
     $t
-    [ $? -ne 0 ] && RESULT=1
-    failed+=($t)
+    if [ $? -ne 0 ]
+    then
+        RESULT=1
+        failed+=($t)
+    fi
 done
 
 if [ ${#failed[@]} -ne 0 ]
