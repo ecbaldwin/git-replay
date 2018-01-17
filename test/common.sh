@@ -8,7 +8,7 @@ create_git_workspace() {
 
     mkdir -p $dir
     pushd $dir
-    git init
+    git init ${1+"$@"}
     popd
 }
 
@@ -30,6 +30,17 @@ assert_equal() {
     if [ "$expected" != "$actual" ]
     then
         echo "$name expected to be '$expected' but was $actual"
+        exit 1
+    fi
+}
+
+assert_not_equal() {
+    name=$1; shift
+    expected=$1; shift
+    actual=$1; shift
+    if [ "$expected" = "$actual" ]
+    then
+        echo "$name expected to be differrent but were equal '$expected'"
         exit 1
     fi
 }

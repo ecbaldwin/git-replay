@@ -3,7 +3,10 @@ import git
 import os
 import shutil
 import stat
+import subprocess
 import sys
+
+from git_replay import change
 
 
 HOOKS_DIR = "hooks"
@@ -37,6 +40,45 @@ def _copy_hook(repo, program_name, name):
     os.chmod(destination, st.st_mode | stat.S_IEXEC)
 
 
+def parse_push_args(repo, args):
+    remote_name, refspec = args
+
+    # For now, we're only allowing simple <src>:<dst> refspecs. The following
+    # checks enforce that.
+    if ":" not in refspec:
+        raise UsageException("Only simple <src>:<dst> refspecs are allowed")
+    if refspec.startswith("+"):
+        raise UsageException("Forced pushes aren't allowed")
+    if refspec == ":":
+        raise UsageException("Deleting refs on the remote is not allowed")
+    if refspec.startswith(":"):
+        raise UsageException("Pushing all matching refs is not allowed")
+    if refspec.endswith(":"):
+        raise UsageException("Destination is missing")
+
+    src_ref, dst_ref = refspec.split(":", 1)
+    remote_ref = "%s/%s" % (remote_name, dst_ref)
+
+    return remote_name, repo.commit(rev=src_ref), repo.commit(rev=remote_ref)
+
+
+@require_repo
+def command_push(repo, program_name, args):
+    # git-replay push <remote> <refspec>
+    remote_name, src, dst = parse_push_args(repo, args)
+
+    # Get changes as seen on the local and remote branches respectively.
+    src_changes = change.Changes.from_range(repo, dst, src)
+    dst_changes = change.Changes.from_range(repo, src, dst)
+
+    for src_change, dst_change in src_changes & dst_changes:
+        if dst_change not in src_change:
+            raise change.Conflict()
+
+    cmd = ["git", "push", remote_name, "+%s" % args[1]]
+    subprocess.run(cmd, check=True)
+
+
 @require_repo
 def command_init(repo, program_name, args):
     _copy_hook(repo, program_name, POST_REWRITE_FILENAME)
@@ -58,6 +100,9 @@ def dispatch_command(program_name, args):
 
     if command == "init-server":
         return command_init_server(program_name, args[1:])
+
+    if command == "push":
+        return command_push(program_name, args[1:])
 
     raise UsageException("Command not recognized: %s" % command)
 
