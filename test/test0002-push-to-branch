@@ -51,11 +51,42 @@ touch three
 git add three
 git commit --amend -C HEAD
 
-! git-replay push origin feature:feature
+git-replay push origin feature:feature | cat
+test ${PIPESTATUS[0]} -ne 0
 
 assert_not_equal "local and remote branches" "$(git rev-parse origin/feature)" "$(git rev-parse feature)"
 
 # Be sure that the git command cannot force push it
-! git push origin +feature:feature
+git push origin +feature:feature | cat
+test ${PIPESTATUS[0]} -ne 0
 
 assert_not_equal "local and remote branches" "$(git rev-parse origin/feature)" "$(git rev-parse feature)"
+
+########################################################################
+# Try some rebasing
+########################################################################
+
+# Put something else on master to rebase to.
+git checkout master
+
+quick_commit_files "Four" four
+quick_commit_files "Five" five
+git push origin master:master
+
+# Go back to the feature branch and try to push a rebase.
+git checkout feature
+git fetch origin
+git rebase origin/master
+# This should fail
+git-replay push origin feature:feature | cat
+test ${PIPESTATUS[0]} -ne 0
+# And a git force push shouldn't work either.
+git push origin +feature:feature | cat
+test ${PIPESTATUS[0]} -ne 0
+
+# At this point, I want the tool to help me merge the change back but I haven't
+# implemented that yet. So, we'll just reset back to the upstream to eliminate
+# the divergent commit and then rebase. Then, the push should work.
+git reset --hard origin/feature
+git rebase origin/master
+git-replay push origin feature:feature
