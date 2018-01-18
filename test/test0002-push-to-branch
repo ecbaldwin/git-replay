@@ -23,18 +23,23 @@ git remote add origin $TEST_TMP_DIR/server.git
 # Test amending the top commit and pushing it to the server
 ########################################################################
 
+# Establish something on master first
 quick_commit_files "First commit" one
+git push origin master:master
+
+# Switch to a feature branch
+git checkout -b feature
 quick_commit_files "Second commit" two
 oldhead=$(git rev-parse HEAD)
 
-git push origin master:master
+git push origin feature:feature
 
 echo "a change" > two
 git commit -a --amend -C HEAD
 
-git-replay push origin master:master
+git-replay push origin feature:feature
 
-assert_equal "local and remote branches" "$(git rev-parse origin/master)" "$(git rev-parse master)"
+assert_equal "local and remote branches" "$(git rev-parse origin/feature)" "$(git rev-parse feature)"
 
 ########################################################################
 # Test that the server rejects a push
@@ -46,11 +51,11 @@ touch three
 git add three
 git commit --amend -C HEAD
 
-! git-replay push origin master:master
+! git-replay push origin feature:feature
 
-assert_not_equal "local and remote branches" "$(git rev-parse origin/master)" "$(git rev-parse master)"
+assert_not_equal "local and remote branches" "$(git rev-parse origin/feature)" "$(git rev-parse feature)"
 
 # Be sure that the git command cannot force push it
-! git push origin +master:master
+! git push origin +feature:feature
 
-assert_not_equal "local and remote branches" "$(git rev-parse origin/master)" "$(git rev-parse master)"
+assert_not_equal "local and remote branches" "$(git rev-parse origin/feature)" "$(git rev-parse feature)"
