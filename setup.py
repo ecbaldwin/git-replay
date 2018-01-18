@@ -20,6 +20,7 @@ setup(name="git-replay",
               'git-replay = git_replay.main:main',
               'post-rewrite = git_replay.post_rewrite:main',
               'pre-receive = git_replay.pre_receive:main',
+              'post-receive = git_replay.post_receive:main',
               'update = git_replay.update:main',
           ]
       })

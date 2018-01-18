@@ -13,6 +13,7 @@ from git_replay import lib
 HOOKS_DIR = "hooks"
 POST_REWRITE_FILENAME = "post-rewrite"
 PRE_RECEIVE_FILENAME = "pre-receive"
+POST_RECEIVE_FILENAME = "post-receive"
 UPDATE_FILENAME = "update"
 
 
@@ -162,6 +163,7 @@ def command_init(repo, program_name, args):
 @require_repo
 def command_init_server(repo, program_name, args):
     _copy_hook(repo, program_name, PRE_RECEIVE_FILENAME)
+    _copy_hook(repo, program_name, POST_RECEIVE_FILENAME)
     _copy_hook(repo, program_name, UPDATE_FILENAME)
 
 

@@ -36,6 +36,7 @@ remote_push_branch=refs/for/master
 remote_fetch_branch=refs/changes/master/$oldhead
 
 git push origin feature:$remote_push_branch
+GIT_DIR=$TEST_TMP_DIR/server.git not git rev-parse refs/for/master --
 
 echo "a change" > two
 git commit -a --amend -C HEAD
