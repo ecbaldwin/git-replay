@@ -40,6 +40,15 @@ def _copy_hook(repo, program_name, name):
     os.chmod(destination, st.st_mode | stat.S_IEXEC)
 
 
+@require_repo
+def command_id(repo, program_name, args):
+    if len(args) == 0:
+        args = ["HEAD"]
+    for arg in args:
+        c = change.Change(repo.commit(rev=arg))
+        print(c.id)
+
+
 def parse_push_args(repo, args):
     remote_name, refspec = args
 
@@ -100,6 +109,9 @@ def dispatch_command(program_name, args):
 
     if command == "init-server":
         return command_init_server(program_name, args[1:])
+
+    if command == "id":
+        return command_id(program_name, args[1:])
 
     if command == "push":
         return command_push(program_name, args[1:])
