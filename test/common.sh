@@ -45,6 +45,12 @@ assert_not_equal() {
     fi
 }
 
+# This doesn't look like much but it fails under `set -e` when the sub-command
+# succeeds. The `!` operator doesn't do this on its own.
+not() {
+    ! ${1+"$@"}
+}
+
 TEST_TMP_DIR=$(mktemp -d)
 cleanup() {
     rm -rf $TEST_TMP_DIR

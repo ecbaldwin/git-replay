@@ -51,14 +51,12 @@ touch three
 git add three
 git commit --amend -C HEAD
 
-git-replay push origin feature:feature | cat
-test ${PIPESTATUS[0]} -ne 0
+not git-replay push origin feature:feature
 
 assert_not_equal "local and remote branches" "$(git rev-parse origin/feature)" "$(git rev-parse feature)"
 
 # Be sure that the git command cannot force push it
-git push origin +feature:feature | cat
-test ${PIPESTATUS[0]} -ne 0
+not git push origin +feature:feature
 
 assert_not_equal "local and remote branches" "$(git rev-parse origin/feature)" "$(git rev-parse feature)"
 
@@ -78,11 +76,10 @@ git checkout feature
 git fetch origin
 git rebase origin/master
 # This should fail
-git-replay push origin feature:feature | cat
-test ${PIPESTATUS[0]} -ne 0
+not git-replay push origin feature:feature
+
 # And a git force push shouldn't work either.
-git push origin +feature:feature | cat
-test ${PIPESTATUS[0]} -ne 0
+not git push origin +feature:feature
 
 # At this point, I want the tool to help me merge the change back but I haven't
 # implemented that yet. So, we'll just reset back to the upstream to eliminate
