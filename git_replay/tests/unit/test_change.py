@@ -11,6 +11,7 @@ class TestChange(unittest.TestCase):
 
         c = change.Change(commit2)
         self.assertEqual(str(commit1), c.id)
+        self.assertEqual(str(commit2), c.head)
 
     def test___contains__(self):
         commit1 = mock.Mock(predecessors=[])

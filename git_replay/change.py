@@ -32,6 +32,11 @@ class Change:
         """ The id of the change is the id of the very first commit that started it. """
         return str(self.chain[0])
 
+    @property
+    def head(self):
+        """ The id of the head (most up to date) commit in the change. """
+        return str(self.chain[-1])
+
     def __contains__(self, other):
         """ Returns True iff the other change is a subset of this one """
         length = len(other.chain)
@@ -39,6 +44,9 @@ class Change:
             return False
 
         return other.chain[length-1] == self.chain[length-1]
+
+    def __str__(self):
+        return "Change (%s)" % ", ".join([str(c)[:7] for c in self.chain])
 
 
 class Changes:
@@ -56,3 +64,7 @@ class Changes:
 
     def __and__(self, other):
         return [(self._changes[str(i)], other._changes[str(i)]) for i in self._set & other._set]
+
+    def __iter__(self):
+        for c in self._changes:
+            yield self._changes[c]
