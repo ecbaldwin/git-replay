@@ -32,14 +32,17 @@ git checkout -b feature
 quick_commit_files "Second commit" two
 oldhead=$(git rev-parse HEAD)
 
-git push origin feature:refs/for/master
+remote_push_branch=refs/for/master
+remote_fetch_branch=refs/changes/master/$oldhead
+
+git push origin feature:$remote_push_branch
 
 echo "a change" > two
 git commit -a --amend -C HEAD
 
-git-replay push origin feature:refs/for/master
+git-replay push origin feature:$remote_push_branch
 
-git fetch origin refs/changes/master/$oldhead
+git fetch origin $remote_fetch_branch
 assert_equal "local and remote branches" "$(git rev-parse FETCH_HEAD)" "$(git rev-parse feature)"
 
 ########################################################################
@@ -52,10 +55,15 @@ touch three
 git add three
 git commit --amend -C HEAD
 
-not git-replay push origin feature:refs/for/master
+not git-replay push origin feature:$remote_push_branch
 
-git fetch origin refs/changes/master/$oldhead
+git fetch origin $remote_fetch_branch
 assert_not_equal "local and remote branches" "$(git rev-parse FETCH_HEAD)" "$(git rev-parse feature)"
+
+# Be sure that the git command cannot force push it
+not git push origin +feature:$remote_push_branch
+
+assert_not_equal "local and remote branches" "$(git rev-parse origin/feature)" "$(git rev-parse feature)"
 
 ########################################################################
 # Try some rebasing
@@ -73,14 +81,17 @@ git checkout feature
 git fetch origin
 git rebase origin/master
 # This should fail
-not git-replay push origin feature:refs/for/master
+not git-replay push origin feature:$remote_push_branch
+
+# And a git force push shouldn't work either.
+not git push origin +feature:$remote_push_branch
 
 # At this point, I want the tool to help me merge the change back but I haven't
 # implemented that yet. So, we'll just reset back to the upstream to eliminate
 # the divergent commit and then rebase. Then, the push should work.
-git fetch origin refs/changes/master/$oldhead
+git fetch origin $remote_fetch_branch
 git reset --hard FETCH_HEAD
 git rebase origin/master
-git-replay push origin feature:refs/for/master
-git fetch origin refs/changes/master/$oldhead
+git-replay push origin feature:$remote_push_branch
+git fetch origin $remote_fetch_branch
 assert_equal "local and remote branches" "$(git rev-parse FETCH_HEAD)" "$(git rev-parse feature)"
