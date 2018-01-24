@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 from git_replay import change
+from git_replay import lib
 
 
 HOOKS_DIR = "hooks"
@@ -65,16 +66,20 @@ def parse_push_args(repo, args):
     if refspec.endswith(":"):
         raise UsageException("Destination is missing")
 
-    src_ref, dst_ref = refspec.split(":", 1)
-    remote_ref = "%s/%s" % (remote_name, dst_ref)
-
-    return remote_name, repo.commit(rev=src_ref), repo.commit(rev=remote_ref)
+    src, dst = refspec.split(":", 1)
+    return remote_name, src, dst
 
 
 @require_repo
 def command_push(repo, program_name, args):
     # git-replay push <remote> <refspec>
-    remote_name, src, dst = parse_push_args(repo, args)
+    remote_name, src_ref, dst_ref = parse_push_args(repo, args)
+    reference = lib.map_to_upstream_branch(dst_ref)
+    if reference.startswith("refs/heads/"):
+        reference = reference[11:]
+
+    src = repo.commit(src_ref)
+    dst = repo.commit(reference)
 
     # Get changes as seen on the local and remote branches respectively.
     src_changes = change.Changes.from_range(repo, dst, src)

@@ -1,0 +1,86 @@
+#!/bin/bash
+
+set -e
+
+. "$(dirname "$0")/common.sh"
+
+create_git_workspace $TEST_TMP_DIR/client
+create_git_workspace $TEST_TMP_DIR/server.git --bare
+
+pushd $TEST_TMP_DIR/server.git
+# Remove sample hooks just so it is easier to see what I've installed
+rm -f hooks/*.sample
+git-replay init-server
+popd
+
+pushd $TEST_TMP_DIR/client
+rm -f hooks/*.sample
+git-replay init
+
+git remote add origin $TEST_TMP_DIR/server.git
+
+########################################################################
+# Test amending the top commit and pushing it to the server
+########################################################################
+
+# Establish something on master first
+quick_commit_files "First commit" one
+git push origin master:master
+
+# Switch to a feature branch
+git checkout -b feature
+quick_commit_files "Second commit" two
+oldhead=$(git rev-parse HEAD)
+
+git push origin feature:refs/for/master
+
+echo "a change" > two
+git commit -a --amend -C HEAD
+
+git-replay push origin feature:refs/for/master
+
+git fetch origin refs/changes/master/$oldhead
+assert_equal "local and remote branches" "$(git rev-parse FETCH_HEAD)" "$(git rev-parse feature)"
+
+########################################################################
+# Test that the server rejects a push
+########################################################################
+
+git reset --hard $oldhead
+
+touch three
+git add three
+git commit --amend -C HEAD
+
+not git-replay push origin feature:refs/for/master
+
+git fetch origin refs/changes/master/$oldhead
+assert_not_equal "local and remote branches" "$(git rev-parse FETCH_HEAD)" "$(git rev-parse feature)"
+
+########################################################################
+# Try some rebasing
+########################################################################
+
+# Put something else on master to rebase to.
+git checkout master
+
+quick_commit_files "Four" four
+quick_commit_files "Five" five
+git push origin master:master
+
+# Go back to the feature branch and try to push a rebase.
+git checkout feature
+git fetch origin
+git rebase origin/master
+# This should fail
+not git-replay push origin feature:refs/for/master
+
+# At this point, I want the tool to help me merge the change back but I haven't
+# implemented that yet. So, we'll just reset back to the upstream to eliminate
+# the divergent commit and then rebase. Then, the push should work.
+git fetch origin refs/changes/master/$oldhead
+git reset --hard FETCH_HEAD
+git rebase origin/master
+git-replay push origin feature:refs/for/master
+git fetch origin refs/changes/master/$oldhead
+assert_equal "local and remote branches" "$(git rev-parse FETCH_HEAD)" "$(git rev-parse feature)"
