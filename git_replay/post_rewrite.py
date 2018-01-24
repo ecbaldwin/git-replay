@@ -44,6 +44,13 @@ def insert_references(repo, pairs):
 
     replacements = {}
     for old, new in pairs:
+        # Create a tag to pin the replaced commit in the object store
+        git.refs.tag.TagReference.create(
+            repo,
+            path="predecessors/%s" % old,
+            ref=old,
+            force=True)
+
         if replacements.get(new):
             continue
 
@@ -54,13 +61,6 @@ def insert_references(repo, pairs):
                                  predecessors=rebase_map[new])
 
         replacements[new] = new_new
-
-        # Create a tag to pin the replaced commit in the object store
-        git.refs.tag.TagReference.create(
-            repo,
-            path="predecessors/%s" % old,
-            ref=old,
-            force=True)
 
     # Reset the head to the new chain of commits
     repo.head.reset(new_new, index=False)
