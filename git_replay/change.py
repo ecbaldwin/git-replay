@@ -2,6 +2,10 @@ class Conflict(Exception):
     """ Raised when trying to push a change that isn't a superset of the remote """
 
 
+class IncompleteChange(Exception):
+    """ Raised when trying to follow the chain of commits in a change and one cannot be found """
+
+
 class Change:
     def __init__(self, commit):
         self.chain = self._get_chain(commit)
@@ -13,15 +17,19 @@ class Change:
         chain = []
 
         def build(commit):
-            if commit.predecessors:
+            try:
+                predecessors = commit.predecessors
+            except ValueError:
+                raise IncompleteChange()
+            if predecessors:
                 # The presence of more than one predecessor means other changes
                 # were merged into this one.
-                if 1 < len(commit.predecessors):
+                if 1 < len(predecessors):
                     raise NotImplementedError("Cannot yet handle multiple predecessors")
 
                 # Commits in the same change are reachable through the first
                 # predecessor.
-                build(commit.predecessors[0])
+                build(predecessors[0])
 
             chain.append(commit)
             return chain
