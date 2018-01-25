@@ -1,9 +1,20 @@
+import git
+
+
 class Conflict(Exception):
     """ Raised when trying to push a change that isn't a superset of the remote """
 
 
 class IncompleteChange(Exception):
     """ Raised when trying to follow the chain of commits in a change and one cannot be found """
+    def __init__(self, missing_commit):
+        self.missing_commit = missing_commit
+
+
+class IncompleteChanges(Exception):
+    """ Raised when failing to create one or more changes due to missing commits """
+    def __init__(self, missing_commits):
+        self.missing_commits = missing_commits
 
 
 class Change:
@@ -19,8 +30,8 @@ class Change:
         def build(commit):
             try:
                 predecessors = commit.predecessors
-            except ValueError:
-                raise IncompleteChange()
+            except git.cmd.MissingObject as e:
+                raise IncompleteChange(e.sha1)
             if predecessors:
                 # The presence of more than one predecessor means other changes
                 # were merged into this one.
@@ -71,12 +82,27 @@ class Change:
 class Changes:
     """ A collection of changes, like on a branch or in a range of commits """
     def __init__(self, commits):
-        self._changes = {str(c.id): c for c in [Change(c) for c in commits]}
+        changes = []
+        missing_commits = []
+        for commit in commits:
+            try:
+                changes.append(Change(commit))
+            except IncompleteChange as e:
+                missing_commits.append(e.missing_commit)
+
+        if missing_commits:
+            raise IncompleteChanges(missing_commits)
+
+        self._changes = {str(c.id): c for c in changes}
         self._set = set(self._changes)
 
     @classmethod
+    def from_commit_range(cls, repo, commit_range):
+        return cls(repo.iter_commits(commit_range))
+
+    @classmethod
     def from_range(cls, repo, start, end):
-        return cls(repo.iter_commits("%s..%s" % (start, end)))
+        return cls.from_commit_range(repo, "%s..%s" % (start, end))
 
     def __sub__(self, other):
         return [self._changes[str(i)] for i in self._set - other._set]

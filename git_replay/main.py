@@ -105,6 +105,30 @@ def command_push(repo, program_name, args):
 
 
 @require_repo
+def command_fetch_intermediates(repo, program_name, args):
+    """ Fetches intermediate commits reachable through predecessor refs
+
+    Since the git transfer protocols don't understand these references, the
+    local repo is often left without some intermediate commits after fetching.
+    Those commits are important to link the whole history of a change.
+    """
+    # git-replay fetch-intermediates <remote> <reference branch>
+    remote_name, commit_range = args
+
+    while True:
+        try:
+            changes = change.Changes.from_commit_range(repo, commit_range)
+            break
+        except change.IncompleteChanges as e:
+            cmd = ["git", "fetch", remote_name]
+            cmd.extend("predecessors/%s" % c.decode("ascii") for c in e.missing_commits)
+            subprocess.run(cmd, check=True)
+
+    for c in changes:
+        print(c)
+
+
+@require_repo
 def command_init(repo, program_name, args):
     _copy_hook(repo, program_name, POST_REWRITE_FILENAME)
 
@@ -131,6 +155,9 @@ def dispatch_command(program_name, args):
 
     if command == "push":
         return command_push(program_name, args[1:])
+
+    if command == "fetch-intermediates":
+        return command_fetch_intermediates(program_name, args[1:])
 
     raise UsageException("Command not recognized: %s" % command)
 

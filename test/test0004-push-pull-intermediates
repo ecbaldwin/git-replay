@@ -5,6 +5,7 @@ set -e
 . "$(dirname "$0")/common.sh"
 
 create_git_workspace $TEST_TMP_DIR/client
+create_git_workspace $TEST_TMP_DIR/client2
 create_git_workspace $TEST_TMP_DIR/server.git --bare
 
 pushd $TEST_TMP_DIR/server.git
@@ -13,21 +14,34 @@ rm -f hooks/*.sample
 git-replay init-server
 popd
 
-pushd $TEST_TMP_DIR/client
-rm -f hooks/*.sample
-git-replay init
+for client in client client2
+do
+    pushd $TEST_TMP_DIR/$client
+    rm -f hooks/*.sample
+    git-replay init
 
-git remote add origin $TEST_TMP_DIR/server.git
+    git remote add origin $TEST_TMP_DIR/server.git
+    popd
+done
+
+pushd $TEST_TMP_DIR/client
 
 # Establish something on master first
 quick_commit_files "First commit" one
 git push origin master:master
+
+# Update the second client
+pushd $TEST_TMP_DIR/client2
+git fetch origin
+git checkout -b master origin/master
+popd
 
 # Switch to a feature branch and create a couple of initial commits
 git checkout -b feature
 quick_commit_files "Second commi" two
 git commit --amend -m "Second commit"
 quick_commit_files "Third commi" three
+changeid=$(git rev-parse HEAD)
 git commit --amend -m "Third commit"
 
 remote_push_branch=refs/for/master
@@ -35,6 +49,16 @@ remote_fetch_branch=refs/changes/master/$oldhead
 
 # Push the initial thing to the server
 git-replay push origin feature:$remote_push_branch
+
+# Update the second client
+pushd $TEST_TMP_DIR/client2
+git fetch origin refs/changes/master/$changeid
+fetch_head=$(git rev-parse FETCH_HEAD)
+git-replay fetch-intermediates origin origin/master..$fetch_head
+# Make sure that the intermediate commits were pulled down
+git cat-file -p $(git cat-file -p ${fetch_head} | awk '/predecessor/ {print$2}')
+git cat-file -p $(git cat-file -p ${fetch_head}~ | awk '/predecessor/ {print$2}')
+popd
 
 # Put something else on master to rebase to.
 git checkout master
@@ -47,3 +71,10 @@ git push origin master:master
 git checkout feature
 git rebase origin/master
 git-replay push origin feature:$remote_push_branch
+
+# Update the second client
+pushd $TEST_TMP_DIR/client2
+git fetch origin
+# TODO(Carl) Don't merge here. Create a command to do this gracefully.
+git reset --hard origin/master
+popd
