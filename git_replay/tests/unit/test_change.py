@@ -51,6 +51,15 @@ class TestChange(unittest.TestCase):
         self.assertEqual([commit3], c1 - c3)
         self.assertEqual([commit4, commit5], c2 - c3)
 
+    def test___iter__(self):
+        commit1 = mock.Mock(predecessors=[])
+        commit2 = mock.Mock(predecessors=[commit1])
+        commit3 = mock.Mock(predecessors=[commit2])
+
+        c1 = change.Change(commit3)
+
+        self.assertEqual([commit1, commit2, commit3], list(c1))
+
 
 class TestChanges(unittest.TestCase):
     def test_operators(self):

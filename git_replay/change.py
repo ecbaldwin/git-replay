@@ -63,6 +63,10 @@ class Change:
                 return self.chain[i:]
         return self.chain[common_length:]
 
+    def __iter__(self):
+        for c in self.chain:
+            yield c
+
 
 class Changes:
     """ A collection of changes, like on a branch or in a range of commits """
