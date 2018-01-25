@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -e
+
+. "$(dirname "$0")/common.sh"
+
+create_git_workspace $TEST_TMP_DIR/client
+create_git_workspace $TEST_TMP_DIR/server.git --bare
+
+pushd $TEST_TMP_DIR/server.git
+# Remove sample hooks just so it is easier to see what I've installed
+rm -f hooks/*.sample
+git-replay init-server
+popd
+
+pushd $TEST_TMP_DIR/client
+rm -f hooks/*.sample
+git-replay init
+
+git remote add origin $TEST_TMP_DIR/server.git
+
+# Establish something on master first
+quick_commit_files "First commit" one
+git push origin master:master
+
+# Switch to a feature branch and create a couple of initial commits
+git checkout -b feature
+quick_commit_files "Second commi" two
+git commit --amend -m "Second commit"
+quick_commit_files "Third commi" three
+git commit --amend -m "Third commit"
+
+remote_push_branch=refs/for/master
+remote_fetch_branch=refs/changes/master/$oldhead
+
+# Push the initial thing to the server
+git-replay push origin feature:$remote_push_branch
+
+# Put something else on master to rebase to.
+git checkout master
+
+quick_commit_files "Four" four
+quick_commit_files "Five" five
+git push origin master:master
+
+# Go back to the feature branch, rebase and try to push
+git checkout feature
+git rebase origin/master
+git-replay push origin feature:$remote_push_branch

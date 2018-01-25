@@ -78,18 +78,29 @@ def command_push(repo, program_name, args):
     if reference.startswith("refs/heads/"):
         reference = reference[11:]
 
-    src = repo.commit(src_ref)
-    dst = repo.commit(reference)
+    local = repo.commit(src_ref)
+    remote = repo.commit(reference)
 
     # Get changes as seen on the local and remote branches respectively.
-    src_changes = change.Changes.from_range(repo, dst, src)
-    dst_changes = change.Changes.from_range(repo, src, dst)
+    local_changes = change.Changes.from_range(repo, remote, local)
+    remote_changes = change.Changes.from_range(repo, local, remote)
 
-    for src_change, dst_change in src_changes & dst_changes:
-        if dst_change not in src_change:
+    push_commits = set()
+    for local_change, remote_change in local_changes & remote_changes:
+        if remote_change not in local_change:
             raise change.Conflict()
+        push_commits.update(local_change - remote_change)
 
-    cmd = ["git", "push", remote_name, "+%s" % args[1]]
+    for c in local_changes - remote_changes:
+        push_commits.update(c)
+
+    # Subtract commits reachable on local branch without following predecessors
+    no_tags = set(repo.iter_commits("%s..%s" % (remote, local)))
+    push_commits -= no_tags
+
+    cmd = ["git", "push", remote_name]
+    cmd.extend("predecessors/%s" % c for c in push_commits)
+    cmd.append("+%s" % args[1])
     subprocess.run(cmd, check=True)
 
 
