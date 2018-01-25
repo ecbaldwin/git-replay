@@ -56,6 +56,13 @@ class Change:
     def __str__(self):
         return "Change (%s)" % ", ".join([str(c)[:7] for c in self.chain])
 
+    def __sub__(self, other):
+        common_length = min(len(self.chain), len(other.chain))
+        for i in range(0, common_length):
+            if self.chain[i] != other.chain[i]:
+                return self.chain[i:]
+        return self.chain[common_length:]
+
 
 class Changes:
     """ A collection of changes, like on a branch or in a range of commits """

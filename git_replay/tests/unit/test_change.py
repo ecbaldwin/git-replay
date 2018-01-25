@@ -31,6 +31,26 @@ class TestChange(unittest.TestCase):
         self.assertNotIn(c3, c2)
         self.assertNotIn(c2, c3)
 
+    def test___sub__(self):
+        commit1 = mock.Mock(predecessors=[])
+        commit2 = mock.Mock(predecessors=[commit1])
+        commit3 = mock.Mock(predecessors=[commit2])
+
+        commit4 = mock.Mock(predecessors=[commit2])
+        commit5 = mock.Mock(predecessors=[commit4])
+
+        c1 = change.Change(commit3)
+        c2 = change.Change(commit5)
+
+        self.assertEqual([commit3], c1 - c2)
+        self.assertEqual([commit4, commit5], c2 - c1)
+
+        c3 = change.Change(commit2)
+        self.assertEqual([], c3 - c2)
+        self.assertEqual([], c3 - c1)
+        self.assertEqual([commit3], c1 - c3)
+        self.assertEqual([commit4, commit5], c2 - c3)
+
 
 class TestChanges(unittest.TestCase):
     def test_operators(self):
