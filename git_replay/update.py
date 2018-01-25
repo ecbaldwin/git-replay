@@ -6,6 +6,7 @@ from git_replay import lib
 
 
 HEADS = "refs/heads/"
+TAGS = "refs/tags/"
 CHANGE_HEADS = "refs/changes/"
 
 
@@ -20,6 +21,10 @@ def get_change_branch(upstream, change_id):
 
 def check_branch(repo, reference, old_ref, new_ref):
     reference = lib.map_to_upstream_branch(reference)
+
+    # Allow updates to tags. Unchecked for now.
+    if reference.startswith(TAGS):
+        return
 
     if not reference.startswith(HEADS):
         raise ReferenceNotInHeads()
