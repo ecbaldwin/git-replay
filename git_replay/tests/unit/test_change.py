@@ -79,3 +79,15 @@ class TestChanges(unittest.TestCase):
 
         self.assertEqual(1, len(changes1 - changes2))
         self.assertEqual(0, len(changes2 - changes1))
+
+    def test_get(self):
+        # Change 1
+        commit1 = mock.Mock(predecessors=[])
+        commit2 = mock.Mock(predecessors=[commit1])
+
+        # Change 2
+        commit3 = mock.Mock(predecessors=[])
+        changes = change.Changes([commit2, commit3])
+
+        self.assertEqual([commit1, commit2], [commit for commit in changes.get(commit1)])
+        self.assertEqual([commit3], [commit for commit in changes.get(commit3)])

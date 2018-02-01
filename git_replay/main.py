@@ -129,6 +129,32 @@ def command_fetch_intermediates(repo, program_name, args):
 
 
 @require_repo
+def command_merge(repo, program_name, args):
+    # git-replay merge <other ref>
+    other_head, = args
+
+    # Get changes as seen on the local and remote branches respectively.
+    fetched_changes = change.Changes.from_range(repo, repo.head, other_head)
+    local_changes = change.Changes.from_range(repo, other_head, repo.head)
+
+    for local_change in local_changes:
+        fetched_change = fetched_changes.get(local_change.id)
+        if fetched_change is None:
+            # We have a change locally that is dropped. This might be okay but
+            # I want to see where it comes up. This could be where we have
+            # added changes locally, which would be fine. We'd want to rebase
+            # them to the remote. It could also be dropping a change in the
+            # middle. I'm not sure yet what to do with that.
+            raise NotImplementedError("Remote dropped a change we have locally: %s" % local_change)
+
+        if local_change not in fetched_change:
+            raise change.Conflict(local_change.id)
+
+    # TODO(Carl) This clobbers local changes.
+    repo.head.reset(other_head, working_tree=True)
+
+
+@require_repo
 def command_init(repo, program_name, args):
     _copy_hook(repo, program_name, POST_REWRITE_FILENAME)
 
@@ -158,6 +184,9 @@ def dispatch_command(program_name, args):
 
     if command == "fetch-intermediates":
         return command_fetch_intermediates(program_name, args[1:])
+
+    if command == "merge":
+        return command_merge(program_name, args[1:])
 
     raise UsageException("Command not recognized: %s" % command)
 

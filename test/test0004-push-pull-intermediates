@@ -58,6 +58,7 @@ git-replay fetch-intermediates origin origin/master..$fetch_head
 # Make sure that the intermediate commits were pulled down
 git cat-file -p $(git cat-file -p ${fetch_head} | awk '/predecessor/ {print$2}')
 git cat-file -p $(git cat-file -p ${fetch_head}~ | awk '/predecessor/ {print$2}')
+git-replay merge $fetch_head
 popd
 
 # Put something else on master to rebase to.
@@ -72,9 +73,18 @@ git checkout feature
 git rebase origin/master
 git-replay push origin feature:$remote_push_branch
 
-# Update the second client
+# Try some stuff on the second client
 pushd $TEST_TMP_DIR/client2
-git fetch origin
-# TODO(Carl) Don't merge here. Create a command to do this gracefully.
-git reset --hard origin/master
+prevhead=$(git rev-parse HEAD)
+# Create an amended commit locally that will conflict with what we fetch from the server.
+git commit --amend -C HEAD
+git fetch origin refs/changes/master/$changeid
+not git-replay merge FETCH_HEAD
+
+# Revert back to before the amend. The merge should work. Analogous to a fast-forward.
+git reset --hard $prevhead
+
+git-replay merge FETCH_HEAD
+assert_equal "Local and fetched head" "$(git rev-parse FETCH_HEAD)" "$(git rev-parse HEAD)"
+
 popd

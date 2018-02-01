@@ -3,6 +3,8 @@ import git
 
 class Conflict(Exception):
     """ Raised when trying to push a change that isn't a superset of the remote """
+    def __init__(self, change_id):
+        self._change_id = change_id
 
 
 class IncompleteChange(Exception):
@@ -103,6 +105,9 @@ class Changes:
     @classmethod
     def from_range(cls, repo, start, end):
         return cls.from_commit_range(repo, "%s..%s" % (start, end))
+
+    def get(self, change_id):
+        return self._changes.get(str(change_id))
 
     def __sub__(self, other):
         return [self._changes[str(i)] for i in self._set - other._set]

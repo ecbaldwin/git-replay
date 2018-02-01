@@ -48,7 +48,7 @@ def check_branch(repo, reference, old_ref, new_ref):
 
         server_change = change.Change(server_commit)
         if server_change not in client_change:
-            raise change.Conflict()
+            raise change.Conflict(server_change.id)
         if client_change not in server_change:
             update_changes.append(client_change)
 
