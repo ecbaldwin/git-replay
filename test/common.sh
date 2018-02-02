@@ -12,6 +12,30 @@ create_git_workspace() {
     popd
 }
 
+create_git_server() {
+    dir=$1; shift
+
+    create_git_workspace $dir --bare
+    pushd $dir
+    # Remove sample hooks just so it is easier to see what I've installed
+    rm -f hooks/*.sample
+    git-replay init-server
+    popd
+}
+
+create_git_client() {
+    server=$1; shift
+    dir=$1; shift
+
+    mkdir -p $(dirname $dir)
+    git clone $server $dir
+    pushd $dir
+    # Remove sample hooks just so it is easier to see what I've installed
+    rm -f hooks/*.sample
+    git-replay init
+    popd
+}
+
 quick_commit_files() {
     msg=$1; shift
 
