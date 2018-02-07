@@ -14,8 +14,10 @@ create_git_workspace() {
 
 create_git_server() {
     local dir=$1; shift
+    local upstream=$1; shift
 
-    create_git_workspace $dir --bare
+    create_git_workspace $upstream --bare
+    git clone $upstream $dir --bare
     pushd $dir
     # Remove sample hooks just so it is easier to see what I've installed
     rm -f hooks/*.sample

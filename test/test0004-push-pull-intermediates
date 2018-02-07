@@ -4,7 +4,7 @@ set -e
 
 . "$(dirname "$0")/common.sh"
 
-create_git_server $TEST_TMP_DIR/server.git
+create_git_server $TEST_TMP_DIR/server.git $TEST_TMP_DIR/upstream.git
 create_git_client $TEST_TMP_DIR/server.git $TEST_TMP_DIR/client
 create_git_client $TEST_TMP_DIR/server.git $TEST_TMP_DIR/client2
 
