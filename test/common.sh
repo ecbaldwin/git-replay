@@ -4,7 +4,7 @@ export GIT_COMMITTER_NAME="Test Committer"
 export GIT_COMMITTER_EMAIL="committer@example.com"
 
 create_git_workspace() {
-    dir=$1; shift
+    local dir=$1; shift
 
     mkdir -p $dir
     pushd $dir
@@ -13,7 +13,7 @@ create_git_workspace() {
 }
 
 create_git_server() {
-    dir=$1; shift
+    local dir=$1; shift
 
     create_git_workspace $dir --bare
     pushd $dir
@@ -24,8 +24,8 @@ create_git_server() {
 }
 
 create_git_client() {
-    server=$1; shift
-    dir=$1; shift
+    local server=$1; shift
+    local dir=$1; shift
 
     mkdir -p $(dirname $dir)
     git clone $server $dir
@@ -37,7 +37,7 @@ create_git_client() {
 }
 
 quick_commit_files() {
-    msg=$1; shift
+    local msg=$1; shift
 
     for filename in ${1+"$@"}
     do
@@ -48,9 +48,9 @@ quick_commit_files() {
 }
 
 assert_equal() {
-    name=$1; shift
-    expected=$1; shift
-    actual=$1; shift
+    local name=$1; shift
+    local expected=$1; shift
+    local actual=$1; shift
     if [ "$expected" != "$actual" ]
     then
         echo "$name expected to be '$expected' but was $actual"
@@ -59,9 +59,9 @@ assert_equal() {
 }
 
 assert_not_equal() {
-    name=$1; shift
-    expected=$1; shift
-    actual=$1; shift
+    local name=$1; shift
+    local expected=$1; shift
+    local actual=$1; shift
     if [ "$expected" = "$actual" ]
     then
         echo "$name expected to be differrent but were equal '$expected'"
