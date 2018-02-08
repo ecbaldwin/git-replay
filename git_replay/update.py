@@ -39,18 +39,21 @@ def check_branch(repo, reference, old_ref, new_ref):
     update_changes = []
     for client_change in client_changes:
         try:
-            server_commit = repo.commit(rev=get_change_branch(reference,
-                                                              client_change.id))
+            server_change = change.Change(
+                repo.commit(
+                    rev=get_change_branch(reference, client_change.id)))
         except git.exc.BadName:
-            # Don't have this change in the context of this branch yet
-            update_changes.append(client_change)
-            continue
+            # Don't have this change in the context of this branch yet. No worries.
+            server_change = change.Change()
 
-        server_change = change.Change(server_commit)
         if server_change not in client_change:
             raise change.Conflict(server_change.id)
-        if client_change not in server_change:
-            update_changes.append(client_change)
+
+        if client_change in server_change:
+            # The server is up to date on this change. Go to the next.
+            continue
+
+        update_changes.append(client_change)
 
     for c in update_changes:
         git.refs.symbolic.SymbolicReference.create(repo=repo,

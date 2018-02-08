@@ -20,12 +20,15 @@ class IncompleteChanges(Exception):
 
 
 class Change:
-    def __init__(self, commit):
+    def __init__(self, commit=None):
         self.chain = self._get_chain(commit)
 
     @staticmethod
     def _get_chain(commit):
         """ Follows the entire chain of commits building a list from earliest to latest"""
+        if commit is None:
+            return []
+
         # TODO(Carl) Chain will not always be linear. In general, it will be a DAG.
         chain = []
 
@@ -60,6 +63,9 @@ class Change:
 
     def __contains__(self, other):
         """ Returns True iff the other change is a subset of this one """
+        if not other.chain:
+            return True
+
         length = len(other.chain)
         if len(self.chain) < length:
             return False
