@@ -76,10 +76,17 @@ class Change:
         return "Change (%s)" % ", ".join([str(c)[:7] for c in self.chain])
 
     def __sub__(self, other):
+        """ Returns a list of commits in this change that don't exist in the other
+
+        The changes will be returned in reverse topological order. with respect
+        to graph of predecessor references such that a commit's predecessors
+        always come before it.
+        """
         common_length = min(len(self.chain), len(other.chain))
         for i in range(0, common_length):
             if self.chain[i] != other.chain[i]:
                 return self.chain[i:]
+        # While we only have a linear set of changes, reverse topo order is easy.
         return self.chain[common_length:]
 
     def __iter__(self):
