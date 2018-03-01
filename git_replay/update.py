@@ -36,7 +36,6 @@ def check_branch(repo, reference, old_ref, new_ref):
         # The branch doesn't exist yet. Just return, allowing the update.
         return
 
-    update_changes = []
     for client_change in client_changes:
         try:
             server_change = change.Change(
@@ -53,13 +52,23 @@ def check_branch(repo, reference, old_ref, new_ref):
             # The server is up to date on this change. Go to the next.
             continue
 
-        update_changes.append(client_change)
-
-    for c in update_changes:
-        git.refs.symbolic.SymbolicReference.create(repo=repo,
-                                                   path=get_change_branch(reference, c.id),
-                                                   reference=c.head,
-                                                   force=True)
+        # TODO(Carl) Each change is updated as soon as we verify that it is up
+        # to date. Since there may be many changes, we could have some updated
+        # while later ones don't get updated. I make no attempt to roll back
+        # the ones which have been updated.
+        # 1. For gerrit style code review, each change is independent. It isn't
+        #    so bad that earlier changes may get updated while laters ones
+        #    don't. I think it is acceptable.
+        # 2. For github style code review, the branch won't get updated.
+        #    Updates to the earlier changes will be unreachable from any branch
+        #    until you fix up the entire branch and successfully update all of
+        #    the changes in the branch. I should give some thought to updating
+        #    all of the changes atomically.
+        git.refs.symbolic.SymbolicReference.create(
+            repo=repo,
+            path=get_change_branch(reference, client_change.id),
+            reference=client_change.head,
+            force=True)
 
 
 def main():
