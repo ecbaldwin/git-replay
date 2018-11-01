@@ -20,6 +20,62 @@ anyway, just in a more out-of-band manner. The extra commits are hidden
 from the mainline history in a side history. A separate connected graph
 would exist in the side-history for each change.
 
+## Scripts
+
+### git-replay
+
+File: `git_replay/main.py`
+
+This is the script that you call from your repo to make it all work. There are
+sub-commands to initialize repositories, push and fetch between repos, and to
+help merge when a conflict in the predecessor graph is found.
+
+Since the transport mechanisms don't understand the predecessor graph, I needed
+to provide a new command to wrap them. The new command uses the
+`refs/tags/predecessor/<commit id>` tags to facilitate moving intermediate
+commits.
+
+Sub-Command          | Description
+-------------------- | -----------
+init                 | Copy hooks into a local working repo. Run it locally.
+init-server          | Copy server-side hooks into a repo. Run it on the server repo.
+id                   | Find the change id from a commit by following the predecessor graph.
+push                 | Push changes to a repo. Uses tags to send intermediates to the server.
+fetch-intermediates  | Fetch missing intermediate commits from a server. Uses tags.
+merge                | Merges divergent predecessor graphs when a conflict is discovered.
+
+## Hooks
+
+Hook         | Where  | File                         | Description
+------------ | ------ | ---------------------------- | --------------
+post-rewrite | Client | `git_replay/post_rewrite.py` | Creates new commits with pointers to old commits.
+post-receive | Server | `git_replay/post_receive.py` | Cleans up "magic" refs.
+update       | Server | `git_replay/update.py`       | Handles pushes. Ensures safe updates to changes. Pushes upstream.
+
+### post-rewrite
+
+Run after any rebase or commit --amend operation. Writes new new references
+which contain pointers to the old references. The intermediate new references,
+the ones created by the rebase or amend command, but before calling this hook,
+get orphaned.
+
+The old commits would also be orphaned except that this hook creates a tag in
+`refs/tags/predecessors/<commit id>` pin them in the repo. If `git gc` and the
+various transport mechanisms eventually get modified to follow predecessor
+references then these tags will no longer be necessary.
+
+### post-receive
+
+Cleans up "magic" refs. These are pass through refs. Many unrelated changes
+come in through them so they get forced pushed and the old values don't matter.
+
+### update
+
+This is the meaty hook on the server side which rejects changes when the
+predecessor graph diverges.
+
+TODO: It will also move changes up to the upstream server when they are accepted.
+
 # The Plan
 
 Here's the plan for the proof of concept. It has a few warts most (if
@@ -37,6 +93,8 @@ The intermediate server will sync merges from upstream.
 Editing through the github or gerrit UIs won't work right because it
 won't create a predecessor reference in the commit. Just need to let
 people know that this is not a safe thing to do.
+
+### Server-
 
 ### Open questions
 
